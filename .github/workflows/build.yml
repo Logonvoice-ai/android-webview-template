@@ -1,0 +1,334 @@
+name: Android Build
+
+# run-name lets the backend find this exact run afterward by listing
+# recent runs and matching on display title -- repository_dispatch does
+# not return a run_id in its response, so this is the bridge between
+# "we dispatched a build" and "here's the run to poll."
+run-name: "${{ github.event.client_payload.build_id || format('manual-{0}', github.run_id) }}"
+
+# Triggered remotely by the backend via the GitHub API:
+#   POST /repos/Logonvoice/android-webview-template/dispatches
+#   { "event_type": "build", "client_payload": { "build_type": "release" } }
+#
+# build_type accepts: "debug", "release", "aab", or "all" (builds all three).
+on:
+  repository_dispatch:
+    types: [build]
+  # Lets you trigger a build manually from the GitHub UI while testing,
+  # without needing the backend at all. Manual runs have no matching Build
+  # row on the backend, so the icon/keystore fetch steps below just skip
+  # gracefully (404/unreachable) and fall back to an unsigned/default build.
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "debug | release | aab | all"
+        required: true
+        default: "all"
+      app_name:
+        description: "App display name"
+        required: false
+        default: "WebView App"
+      package_name:
+        description: "Android application ID"
+        required: false
+        default: "com.template.webviewapp"
+      start_url:
+        description: "URL the app loads"
+        required: false
+        default: "https://example.com"
+      theme_color:
+        description: "Hex theme color"
+        required: false
+        default: "#000000"
+      version_name:
+        description: "Version name (e.g. 1.0.0)"
+        required: false
+        default: "1.0.0"
+      version_code:
+        description: "Version code (integer)"
+        required: false
+        default: "1"
+      splash_enabled:
+        description: "true | false"
+        required: false
+        default: "true"
+      permission_camera:
+        description: "true | false"
+        required: false
+        default: "false"
+      permission_location:
+        description: "true | false"
+        required: false
+        default: "false"
+      permission_storage:
+        description: "true | false"
+        required: false
+        default: "false"
+      license_key:
+        description: "Build's license_key (leave blank for a manual/unlicensed test build)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        # Handles Gradle wrapper caching/generation for us -- we don't need
+        # to commit gradle-wrapper.jar to the template repo.
+
+      # --- Resolve inputs from either trigger source into one place -------
+      - name: Resolve build parameters
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "build_type=${{ github.event.client_payload.build_type }}" >> "$GITHUB_OUTPUT"
+            echo "app_name=${{ github.event.client_payload.app_name }}" >> "$GITHUB_OUTPUT"
+            echo "package_name=${{ github.event.client_payload.package_name }}" >> "$GITHUB_OUTPUT"
+            echo "start_url=${{ github.event.client_payload.start_url }}" >> "$GITHUB_OUTPUT"
+            echo "theme_color=${{ github.event.client_payload.theme_color }}" >> "$GITHUB_OUTPUT"
+            echo "version_name=${{ github.event.client_payload.version_name }}" >> "$GITHUB_OUTPUT"
+            echo "version_code=${{ github.event.client_payload.version_code }}" >> "$GITHUB_OUTPUT"
+            echo "splash_enabled=${{ github.event.client_payload.splash_enabled }}" >> "$GITHUB_OUTPUT"
+            echo "build_id=${{ github.event.client_payload.build_id }}" >> "$GITHUB_OUTPUT"
+
+            # client_payload is capped at 10 top-level properties by GitHub,
+            # so the three permission flags travel as one comma-separated
+            # string, with the build's license_key appended after a `|`
+            # (e.g. "camera,storage|01HXYZ...") -- both get split back out
+            # here. api_base isn't sent at all since it's the same for
+            # every build; it's set below directly from secrets.BACKEND_URL.
+            RAW="${{ github.event.client_payload.permissions }}"
+            PERMS=",${RAW%|*},"
+            LICENSE_KEY="${RAW##*|}"
+            echo "license_key=$LICENSE_KEY" >> "$GITHUB_OUTPUT"
+            CAMERA=false; LOCATION=false; STORAGE=false
+            case "$PERMS" in *,camera,*) CAMERA=true ;; esac
+            case "$PERMS" in *,location,*) LOCATION=true ;; esac
+            case "$PERMS" in *,storage,*) STORAGE=true ;; esac
+            echo "permission_camera=$CAMERA" >> "$GITHUB_OUTPUT"
+            echo "permission_location=$LOCATION" >> "$GITHUB_OUTPUT"
+            echo "permission_storage=$STORAGE" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_type=${{ inputs.build_type }}" >> "$GITHUB_OUTPUT"
+            echo "app_name=${{ inputs.app_name }}" >> "$GITHUB_OUTPUT"
+            echo "package_name=${{ inputs.package_name }}" >> "$GITHUB_OUTPUT"
+            echo "start_url=${{ inputs.start_url }}" >> "$GITHUB_OUTPUT"
+            echo "theme_color=${{ inputs.theme_color }}" >> "$GITHUB_OUTPUT"
+            echo "version_name=${{ inputs.version_name }}" >> "$GITHUB_OUTPUT"
+            echo "version_code=${{ inputs.version_code }}" >> "$GITHUB_OUTPUT"
+            echo "splash_enabled=${{ inputs.splash_enabled }}" >> "$GITHUB_OUTPUT"
+            echo "permission_camera=${{ inputs.permission_camera }}" >> "$GITHUB_OUTPUT"
+            echo "permission_location=${{ inputs.permission_location }}" >> "$GITHUB_OUTPUT"
+            echo "permission_storage=${{ inputs.permission_storage }}" >> "$GITHUB_OUTPUT"
+            echo "license_key=${{ inputs.license_key }}" >> "$GITHUB_OUTPUT"
+            echo "build_id=manual-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- Inject config into gradle.properties (overrides the {{ }} tokens
+      # committed in the template so a plain checkout still builds with
+      # sane defaults if triggered without payload). ------------------------
+      - name: Write gradle.properties overrides
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          cat >> gradle.properties << EOF
+          APP_NAME=${{ steps.params.outputs.app_name }}
+          PACKAGE_NAME=${{ steps.params.outputs.package_name }}
+          VERSION_NAME=${{ steps.params.outputs.version_name }}
+          VERSION_CODE=${{ steps.params.outputs.version_code }}
+          START_URL=${{ steps.params.outputs.start_url }}
+          THEME_COLOR=${{ steps.params.outputs.theme_color }}
+          SPLASH_ENABLED=${{ steps.params.outputs.splash_enabled }}
+          PERMISSION_CAMERA=${{ steps.params.outputs.permission_camera }}
+          PERMISSION_LOCATION=${{ steps.params.outputs.permission_location }}
+          PERMISSION_STORAGE=${{ steps.params.outputs.permission_storage }}
+          LICENSE_KEY=${{ steps.params.outputs.license_key }}
+          API_BASE=$BACKEND_URL
+          EOF
+        # Properties files use "last write wins" per key, so appending
+        # overrides is enough -- no need to strip the original {{TOKEN}}
+        # lines first.
+
+      # --- Per-project custom app icon (optional) --------------------------
+      # Falls back silently to the template's default launcher icon if the
+      # project has none uploaded, or if the backend is unreachable (e.g.
+      # a manual workflow_dispatch test run with no matching Build row).
+      - name: Fetch custom app icon
+        continue-on-error: true
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          BACKEND_API_TOKEN: ${{ secrets.BACKEND_API_TOKEN }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$BACKEND_API_TOKEN" ]; then
+            echo "BACKEND_URL/BACKEND_API_TOKEN not configured -- using default template icon."
+            exit 0
+          fi
+
+          curl -fsSL -H "Authorization: Bearer $BACKEND_API_TOKEN" \
+            "$BACKEND_URL/api/ci/builds/${{ steps.params.outputs.build_id }}/icon" \
+            -o app/src/main/res/drawable/ic_launcher_foreground.png \
+            && rm -f app/src/main/res/drawable/ic_launcher_foreground.xml \
+            && echo "Custom icon applied." \
+            || echo "No custom icon for this project -- using default template icon."
+
+      # --- Per-project signing keystore (release/aab/all builds only) ------
+      # Reuses the SAME keystore across every build of a given project (so
+      # v2, v3, v4 stay update-compatible on a device / Play Store). The
+      # first release/aab build for a brand-new project generates a keystore
+      # right here with keytool, then registers it with the backend so every
+      # future build of that project fetches and reuses it instead of
+      # generating a new one.
+      - name: Fetch or generate signing keystore
+        if: steps.params.outputs.build_type == 'release' || steps.params.outputs.build_type == 'aab' || steps.params.outputs.build_type == 'all'
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          BACKEND_API_TOKEN: ${{ secrets.BACKEND_API_TOKEN }}
+        run: |
+          set -e
+          BUILD_ID="${{ steps.params.outputs.build_id }}"
+
+          if [ -z "$BACKEND_URL" ] || [ -z "$BACKEND_API_TOKEN" ]; then
+            echo "::error::BACKEND_URL/BACKEND_API_TOKEN are not set. A release build"
+            echo "::error::without them would be signed by a throwaway key that nobody"
+            echo "::error::keeps, and the app could never be updated. Refusing to build."
+            exit 1
+          fi
+
+          # Ask the backend, keeping the HTTP status separate from the body.
+          # This is the whole safety mechanism: "the server said there is no
+          # keystore yet" and "I could not reach the server" must never be
+          # treated as the same answer. Confusing them is how an app silently
+          # gets signed with a brand-new key and loses the ability to update.
+          HTTP_CODE=$(curl -sS -o keystore_response.json -w '%{http_code}' \
+            -H "Authorization: Bearer $BACKEND_API_TOKEN" \
+            "$BACKEND_URL/api/ci/builds/$BUILD_ID/keystore" || echo "000")
+
+          if [ "$HTTP_CODE" = "000" ]; then
+            echo "::error::Could not reach $BACKEND_URL at all. If you have moved the"
+            echo "::error::site to a new domain, update the BACKEND_URL secret."
+            exit 1
+          fi
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Backend answered HTTP $HTTP_CODE for this project's keystore:"
+            cat keystore_response.json || true
+            echo ""
+            echo "::error::Stopping rather than generating a replacement key. A 500 here"
+            echo "::error::usually means the project is marked as having a keystore but"
+            echo "::error::the file is missing on the server -- restore it from the old"
+            echo "::error::install instead of rebuilding."
+            exit 1
+          fi
+
+          RESPONSE=$(cat keystore_response.json)
+          rm -f keystore_response.json
+
+          EXISTS=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('exists', False))" 2>/dev/null || echo "PARSE_FAILED")
+
+          if [ "$EXISTS" = "PARSE_FAILED" ]; then
+            echo "::error::Backend returned 200 but the body was not the JSON we expect."
+            echo "::error::Often an HTML login page or an error page. Not generating a key."
+            exit 1
+          fi
+
+          if [ "$EXISTS" = "True" ]; then
+            echo "Reusing existing project keystore."
+            echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['keystore_base64'])" | base64 -d > release.keystore
+            ALIAS=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['alias'])")
+            STORE_PASSWORD=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['store_password'])")
+            KEY_PASSWORD=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['key_password'])")
+          else
+            echo "No existing keystore for this project -- generating a new one."
+            ALIAS="app"
+            STORE_PASSWORD=$(openssl rand -hex 16)
+            # PKCS12 keystores (keytool's default since Java 9) do not support
+            # a key password different from the store password -- keytool
+            # silently ignores -keypass and uses STORE_PASSWORD for the key
+            # entry instead. Keeping KEY_PASSWORD identical avoids signing
+            # with a password Gradle can't actually use to unlock the key.
+            KEY_PASSWORD="$STORE_PASSWORD"
+
+            keytool -genkeypair -v -keystore release.keystore \
+              -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storetype PKCS12 \
+              -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -dname "CN=${{ steps.params.outputs.app_name }}, OU=Logonvoice, O=Logonvoice, L=Accra, ST=Greater Accra, C=GH"
+
+            KEYSTORE_B64=$(base64 -w0 release.keystore)
+
+            curl -fsS -X POST \
+              -H "Authorization: Bearer $BACKEND_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"keystore_base64\":\"$KEYSTORE_B64\",\"alias\":\"$ALIAS\",\"store_password\":\"$STORE_PASSWORD\",\"key_password\":\"$KEY_PASSWORD\"}" \
+              "$BACKEND_URL/api/ci/builds/$BUILD_ID/keystore" \
+              && echo "New keystore registered with backend." \
+              || {
+                   echo "::error::The new keystore could not be saved to the backend."
+                   echo "::error::Continuing would ship an app signed by a key that exists"
+                   echo "::error::nowhere but this runner, which is deleted in a minute."
+                   echo "::error::That app could never be updated. Stopping."
+                   exit 1
+                 }
+          fi
+
+          # Mask secrets in logs BEFORE they get printed/exported anywhere --
+          # these are freshly generated/fetched, so GitHub doesn't already
+          # know to redact them the way it does for the `secrets` context.
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+
+          echo "SIGNING_KEYSTORE_PATH=$(pwd)/release.keystore" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew || true
+        # `|| true` because gradle/actions/setup-gradle can run via the
+        # `gradle` binary directly if gradlew isn't present yet on a fresh
+        # template checkout -- see setup-gradle step above.
+
+      - name: Build Debug APK
+        if: steps.params.outputs.build_type == 'debug' || steps.params.outputs.build_type == 'all'
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Build Release APK
+        if: steps.params.outputs.build_type == 'release' || steps.params.outputs.build_type == 'all'
+        run: ./gradlew assembleRelease --no-daemon
+        # SIGNING_* env vars come from the "Fetch or generate signing
+        # keystore" step above via $GITHUB_ENV, not declared here -- doing
+        # so would override them with an empty `secrets.*` reference, since
+        # signing is now per-project rather than one shared repo secret.
+
+      - name: Build Release AAB (Play Store)
+        if: steps.params.outputs.build_type == 'aab' || steps.params.outputs.build_type == 'all'
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f release.keystore
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-${{ steps.params.outputs.build_id }}
+          # 30 days of recovery room. Raising this is safe on a public repo;
+          # on a private one the Free plan only includes 500 MB of artifact
+          # storage in total, and each build here is roughly 5-15 MB.
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/bundle/**/*.aab
