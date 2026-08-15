@@ -1,0 +1,11 @@
+<resources>
+    <!-- theme_color is injected at build time via resValue in app/build.gradle
+         (driven by the THEME_COLOR placeholder). These are static fallbacks
+         used for surfaces that shouldn't change per-app. -->
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#121212</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#6E6E6E</color>
+    <color name="offline_background">#F5F5F5</color>
+    <color name="trial_banner_background">#FFB020</color>
+</resources>

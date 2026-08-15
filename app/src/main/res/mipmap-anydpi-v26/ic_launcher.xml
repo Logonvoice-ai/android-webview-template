@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        Backend contract: when a user uploads a custom app icon, the
+        pipeline generates/overwrites:
+          res/drawable/ic_launcher_background.xml (or .png)
+          res/drawable/ic_launcher_foreground.png
+        rather than touching this file. Keeping this file static means
+        the template repo never needs per-app edits for icons either.
+    -->
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

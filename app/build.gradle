@@ -1,0 +1,121 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Values below are read from gradle.properties, which the backend
+// rewrites (replacing {{PLACEHOLDER}} tokens) before every CI build.
+// This file itself never needs to change per-app.
+def appPackageName   = project.findProperty('PACKAGE_NAME')   ?: 'com.template.webviewapp'
+def appVersionName   = project.findProperty('VERSION_NAME')   ?: '1.0.0'
+def appVersionCode   = (project.findProperty('VERSION_CODE') ?: '1').toString().isInteger()
+        ? (project.findProperty('VERSION_CODE') ?: '1').toInteger() : 1
+def appStartUrl      = project.findProperty('START_URL')      ?: 'https://example.com'
+def appName          = project.findProperty('APP_NAME')       ?: 'WebView App'
+def appThemeColor    = project.findProperty('THEME_COLOR')    ?: '#000000'
+def splashEnabled    = (project.findProperty('SPLASH_ENABLED') ?: 'true').toString()
+def permCamera       = (project.findProperty('PERMISSION_CAMERA') ?: 'false').toString()
+def permLocation     = (project.findProperty('PERMISSION_LOCATION') ?: 'false').toString()
+def permStorage      = (project.findProperty('PERMISSION_STORAGE') ?: 'false').toString()
+def appLicenseKey    = project.findProperty('LICENSE_KEY')    ?: ''
+def appApiBase       = project.findProperty('API_BASE')       ?: ''
+
+def namespaceName = "com.template.webviewapp"  // FIXED — matches Kotlin source package, never changes
+
+
+android {
+    namespace namespaceName
+    compileSdk 34
+
+    defaultConfig {
+        applicationId appPackageName
+        minSdk 24
+        targetSdk 34
+        versionCode appVersionCode
+        versionName appVersionName
+
+        // Exposed to Kotlin at compile time via BuildConfig.* -- this is
+        // how MainActivity/WebViewController know what to load and how
+        // to behave, without any per-app source file edits.
+        buildConfigField "String", "START_URL", "\"${appStartUrl}\""
+        buildConfigField "String", "APP_NAME", "\"${appName}\""
+        buildConfigField "String", "THEME_COLOR", "\"${appThemeColor}\""
+        buildConfigField "boolean", "SPLASH_ENABLED", splashEnabled
+        buildConfigField "boolean", "PERMISSION_CAMERA", permCamera
+        buildConfigField "boolean", "PERMISSION_LOCATION", permLocation
+        buildConfigField "boolean", "PERMISSION_STORAGE", permStorage
+        buildConfigField "String", "LICENSE_KEY", "\"${appLicenseKey}\""
+        buildConfigField "String", "API_BASE", "\"${appApiBase}\""
+
+        // Makes the theme color available as a real color resource
+        // (@color/theme_color), not just a string, so it can be used in
+        // themes.xml / status bar tinting / splash background.
+        resValue "color", "theme_color", appThemeColor
+
+        // app_name as an actual string resource. NOT done via
+        // manifestPlaceholders -- that only substitutes inside
+        // AndroidManifest.xml, not other resource files, which was the bug
+        // causing "${appName}" to show up literally as the installed app's
+        // name/label instead of the real name.
+        resValue "string", "app_name", "\"${appName}\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            // Populated by CI from secrets (see .github/workflows/build.yml).
+            // Never commit a real keystore or these values.
+            def storeFilePath = System.getenv("SIGNING_KEYSTORE_PATH")
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+                storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv("SIGNING_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // AAB (Play Store) and APK both come from the same build type --
+    // `bundleRelease` vs `assembleRelease`. Nothing special needed here.
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

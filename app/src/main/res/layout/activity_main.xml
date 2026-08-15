@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface_light">
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/webView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="top"
+        android:indeterminate="false"
+        android:max="100"
+        android:progressTint="@color/theme_color"
+        android:visibility="gone" />
+
+    <!-- Small banner shown when connectivity drops AFTER a page has already
+         loaded successfully. Keeps the last-loaded content visible instead
+         of replacing it with the full offlineView below, which is reserved
+         for a cold-start failure (nothing has loaded yet). -->
+    <TextView
+        android:id="@+id/connectivityBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/theme_color"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="@string/connectivity_banner_text"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Shown during a Release build's 10-day trial, before the project has
+         been paid for. Small non-blocking bar rather than a full overlay —
+         see TrialGate.kt / MainActivity for when this appears/disappears. -->
+    <TextView
+        android:id="@+id/trialBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/trial_banner_background"
+        android:gravity="center"
+        android:padding="8dp"
+        android:textColor="#1A1300"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="Trial — 6 days left" />
+
+    <LinearLayout
+        android:id="@+id/offlineView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/offline_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/offlineTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/offline_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/offline_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/retryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:backgroundTint="@color/theme_color"
+            android:text="@string/retry"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Full-screen — shown only once TrialGate reports trial_expired and
+         not licensed. Replaces the WebView content entirely, unlike
+         trialBanner above which sits on top of it. -->
+    <LinearLayout
+        android:id="@+id/lockView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/surface_light"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/lockTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/lock_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/lock_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/unlockButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:backgroundTint="@color/theme_color"
+            android:text="@string/unlock_button"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/recheckLicenseButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@android:color/transparent"
+            android:text="@string/recheck_license_button"
+            android:textColor="@color/text_secondary" />
+
+    </LinearLayout>
+
+</FrameLayout>

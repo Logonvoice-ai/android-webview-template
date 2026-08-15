@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Default: only HTTPS traffic is trusted, which covers the vast
+        majority of customer sites (store.com, etc). If a user's START_URL
+        is genuinely http-only (rare, e.g. local/dev sites), the backend
+        should inject a domain-config block with cleartextTrafficPermitted
+        set to true, scoped to that specific domain only. Never enable
+        cleartext globally.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

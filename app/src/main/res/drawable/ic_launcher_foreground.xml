@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Generic placeholder mark (globe outline). Replaced per-app when
+         the user uploads a custom icon; the build pipeline swaps this
+         file (or a rasterized PNG at the same path) before build. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,29 C69.9,29 82.8,41.9 82.8,57.8 C82.8,73.7 69.9,86.6 54,86.6 C38.1,86.6 25.2,73.7 25.2,57.8 C25.2,41.9 38.1,29 54,29 Z M54,35 C41.3,35 31,45.1 31,57.8 C31,70.5 41.3,80.6 54,80.6 C66.7,80.6 77,70.5 77,57.8 C77,45.1 66.7,35 54,35 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,29 L54,86.6 M25.2,57.8 L82.8,57.8" />
+</vector>

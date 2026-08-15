@@ -1,0 +1,17 @@
+<resources>
+    <!-- app_name is intentionally not defined here. It is generated via
+         resValue in app/build.gradle, driven by the APP_NAME placeholder,
+         the same mechanism used for theme_color. Defining it here too
+         would cause a duplicate resource build error. -->
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_message">Check your internet connection and try again.</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading…</string>
+    <string name="connectivity_banner_text">You\'re offline — showing the last loaded page</string>
+    <string name="trial_banner_days_remaining">Trial — %1$d days left</string>
+    <string name="trial_banner_last_day">Trial — last day</string>
+    <string name="lock_title">Your trial has ended</string>
+    <string name="lock_message">Pay once to keep using this app. No reinstall needed — it unlocks automatically.</string>
+    <string name="unlock_button">Continue to payment</string>
+    <string name="recheck_license_button">I\'ve already paid — check again</string>
+</resources>

@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.WebViewApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/theme_color</item>
+        <item name="colorPrimaryDark">@color/theme_color</item>
+        <item name="colorAccent">@color/theme_color</item>
+        <item name="android:statusBarColor">@color/theme_color</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+    </style>
+
+    <!-- Splash theme: shows an immediate colored screen with the app icon
+         while SplashActivity decides whether to show the WebView or the
+         offline screen. Avoids the classic "white flash" on cold start. -->
+    <style name="Theme.WebViewApp.Splash" parent="Theme.WebViewApp">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

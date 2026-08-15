@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/theme_color" />
+    <!-- Sized directly on the <item> itself rather than wrapping in a
+         <bitmap> tag. <bitmap> expects a raster-compatible src and does
+         not reliably support vector drawables; ic_launcher_foreground is
+         a <vector>, so referencing it here avoids that mismatch entirely.
+         This also fixes the earlier crash caused by pointing at
+         @mipmap/ic_launcher (an <adaptive-icon>, not a plain drawable). -->
+    <item
+        android:width="120dp"
+        android:height="120dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>
