@@ -88,6 +88,12 @@ class MainActivity : AppCompatActivity() {
         offlineView = findViewById(R.id.offlineView)
         connectivityBanner = findViewById(R.id.connectivityBanner)
         progressBar = findViewById(R.id.progressBar)
+
+        // A free test build advertises itself. The customer paid nothing, so
+        // it must not be usable as the real thing -- the banner stays put for
+        // the life of the app and there is no way to dismiss it.
+        findViewById<android.widget.TextView>(R.id.testBuildBanner).visibility =
+            if (BuildConfig.DEBUG) android.view.View.VISIBLE else android.view.View.GONE
         trialBanner = findViewById(R.id.trialBanner)
         lockView = findViewById(R.id.lockView)
 

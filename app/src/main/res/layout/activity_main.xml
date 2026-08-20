@@ -153,4 +153,25 @@
 
     </LinearLayout>
 
+    <!-- Shown only in debug (test) builds. A free test build must never be
+         mistaken for something a business can hand to its customers, so this
+         sits above the WebView and cannot be dismissed. Release builds do
+         not include it: the visibility is set from BuildConfig.DEBUG. -->
+    <TextView
+        android:id="@+id/testBuildBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#CC7519F5"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:gravity="center"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:text="@string/test_build_notice"
+        android:visibility="gone" />
+
 </FrameLayout>

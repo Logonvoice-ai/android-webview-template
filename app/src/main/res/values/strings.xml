@@ -14,4 +14,6 @@
     <string name="lock_message">Pay once to keep using this app. No reinstall needed — it unlocks automatically.</string>
     <string name="unlock_button">Continue to payment</string>
     <string name="recheck_license_button">I\'ve already paid — check again</string>
+    <!-- Deliberately blunt: this build is for checking the app, not trading. -->
+    <string name="test_build_notice">TEST BUILD — not licensed for business use</string>
 </resources>
